@@ -38,8 +38,7 @@ void *free_list = NULL;
 
 void *malloc(size_t request_size) {
 	int *temp = NULL;
-	printf("%s","request_size:    ");
-	printf("%i\n",request_size);
+
 	int amountToAllocate = 0;
     // if heap_begin is NULL, then this must be the first
     // time that malloc has been called.  ask for a new
@@ -48,12 +47,14 @@ void *malloc(size_t request_size) {
     if (!heap_begin) {
         heap_begin = mmap(NULL, HEAPSIZE, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
 		free_list=heap_begin;
-		printf("%i\n",free_list);
+		printf("%s", "start of heap:   ");
+		printf("%i\n",heap_begin);
 		//set header
 		setHeader(heap_begin, HEAPSIZE, 0);
         atexit(dump_memory_map);
    }
-
+	printf("%s","request_size:    ");
+	printf("%i\n",request_size);
 		
 	amountToAllocate = closestPower2(request_size);
 	printf("%s", "ammount to allocate:   ");
@@ -63,35 +64,40 @@ void *malloc(size_t request_size) {
 	printf("%s","memory location for block to allocate:   ");
 	printf("%i\n",temp);
 
+	printf("%s","first block of free list:    ");
+	printf("%i\n",free_list);
+
 	splitBlock(temp, amountToAllocate);
 
 }
 
 void *splitBlock(int *free_list_temp, int amountToAllocate) {
-	printf("%s\n","splitBlock:");
+	//printf("%s\n","splitBlock:");
 	void* tempNext = (free_list_temp+(*(free_list_temp+1)/4));
 	void* free_list_temp2 = free_list_temp;
 	int difference = 0;
 	//int* free_list_temp = (int*)currentBlock;
-	printf("%i\n",*(free_list_temp));
+	//printf("%i\n",*(free_list_temp));
 	if (*(free_list_temp)>amountToAllocate) {
 		//update header of first
 		*(free_list_temp) = *(free_list_temp)/2;
-		printf("%s", "new first header size:   ");
-		printf("%i\n",*(free_list_temp));	
-		*(free_list_temp+1) = *(free_list_temp);
-		printf("%s", "new first header next:   ");
-		printf("%i\n",*(free_list_temp+1));
+		//printf("%s", "new first header size:   ");
+		//printf("%i\n",*(free_list_temp));	
+		*(free_list_temp+1) = 0;
+		//printf("%s", "new first header next:   ");
+		//printf("%i\n",*(free_list_temp+1));
+		free_list = (free_list_temp + (*free_list_temp/4));
 
 
 		//update header of second
 		*(free_list_temp + (*free_list_temp/4)) = *(free_list_temp);
-		printf("%s", "new second header size:   ");
-		printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
+		//printf("%s", "new second header size:   ");
+		//printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
 		free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
 		difference = diff( free_list_temp2,tempNext);
 		//*((free_list_temp + (*free_list_temp/4))+1) = 
-		printf("%i\n",difference);
+		*(free_list_temp + (*free_list_temp/4)+1) = difference;
+		//printf("%i\n",*(free_list_temp + (*free_list_temp/4)+1)); //need to fix this for last eleemtn. should be 0
 
 	}
 
@@ -108,7 +114,6 @@ void *firstFreeBlock(void *free_list_local, int amountToAllocate) {
 	}
 	//for last element	
 	if (amountToAllocate<=*(free_list_temp)) {
-		printf("%s\n","YAAY");
 		return free_list_temp;
 
 	}
@@ -121,6 +126,7 @@ void free(void *memory_block) {
 }
 
 void dump_memory_map(void) {
+		printf("%s\n","-----------------------");
 		int* free_list_local = (int*)(free_list);
 		while (*(free_list_local+1)!=0) {
 			printf("%s","Block Size:  ");
@@ -129,8 +135,10 @@ void dump_memory_map(void) {
 			printf("%i",*(free_list_local+1));
 			printf("%s\n",",  free");
 			free_list_local = free_list_local + (*free_list_local/4);
+			printf("%i\n",free_list_local);
 			//need to check current minus previous to see if there are allocated chunks inbetween.
 		}
+		printf("%s\n","-----------------------");
 }
 
 
@@ -139,12 +147,12 @@ uint64_t diff (void *a, void *b) {
 	//b-a
 	int bitDiff = 0;
 	uint64_t aConverted = (uint64_t*)a; //typecast
-	printf("%s","a:  ");
-	printf("%" PRIx64 "\n",aConverted);
+	//printf("%s","a:  ");
+	//printf("%" PRIx64 "\n",aConverted);
 
 	uint64_t bConverted = (uint64_t*)b; //typecast
-	printf("%s","b:  ");
-	printf("%" PRIx64 "\n",bConverted);
+	//printf("%s","b:  ");
+	//printf("%" PRIx64 "\n",bConverted);
 
 	uint64_t diffConverted = bConverted^aConverted; //calc. diff
 
@@ -206,6 +214,7 @@ int closestPower2 (size_t requested) {
 
 	toAllocate = (ceil(log2(requestedTemp)));
 	toAllocate = pow (2, toAllocate);
+
 	return (int)toAllocate;
 }
 
