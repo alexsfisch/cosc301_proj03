@@ -63,8 +63,7 @@ void *malloc(size_t request_size) {
         atexit(dump_memory_map);
    }
 
-	//printf("%s","free list location:    ");
-	//printf("%i\n",free_list);
+
 	
 		
 	amountToAllocate = closestPower2(request_size);
@@ -79,10 +78,12 @@ void *malloc(size_t request_size) {
 
 	splitBlock(temp, amountToAllocate);
 
+
+
 }
 
 void *splitBlock(int *free_list_temp, int amountToAllocate) {
-		printf("%s\n","SPLIT BLOCK");
+	printf("%s\n","SPLIT BLOCK");
 	void* tempNext = free_list_temp;
 	void* free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
 	int difference = 0;
@@ -99,23 +100,18 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 		*(free_list_temp+1) =  *(free_list_temp); //zero because you are allocating
 		printf("%s", "new first header next:   ");
 		printf("%i\n",*(free_list_temp+1));
-		//free_list = (free_list_temp + (*free_list_temp/4));
 
 
 		//update header of second
 		*(free_list_temp + (*free_list_temp/4)) = *(free_list_temp);
 		printf("%s", "new second header size:   ");
 		printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
-		/*printf("%s", "*(free_list_temp + (*free_list_temp/4))");
-		printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
-		printf("%s", "*(free_list_temp + (*free_list_temp+1/4))");
-		printf("%i\n",*(free_list_temp + (*free_list_temp+1/4)));*/
+
 		free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
 
 		//find difference for offset of second block
 		difference = diff(tempNext,free_list_temp2);
-		//printf("%s", "difference:   ");
-		//printf("%i\n",difference);
+
 		*(free_list_temp + (*free_list_temp/4)+1) = difference;
 		printf("%s", "new second header next:   ");
 		printf("%i\n",*(free_list_temp + (*free_list_temp/4)+1)); //need to fix this for last eleemtn. should be 0
@@ -126,6 +122,7 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 	setHeader(free_list_temp,*(free_list_temp),0);//set next to 0 to indicate allocated
 	free_list = free_list_temp2; //update free list to exclude recently allocated block
 	printf("%i\n",free_list);
+	return free_list_temp-2;
 
 }
 
@@ -176,23 +173,16 @@ uint64_t diff (void *a, void *b) {
 	//b-a
 	int bitDiff = 0;
 	uint64_t aConverted = (uint64_t*)a; //typecast
-	//printf("%s","a:  ");
-	//printf("%" PRIx64 "\n",aConverted);
+
 
 	uint64_t bConverted = (uint64_t*)b; //typecast
-	//printf("%s","b:  ");
-	//printf("%" PRIx64 "\n",bConverted);
+
 
 	uint64_t diffConverted = bConverted^aConverted; //calc. diff
 
-	/*printf("%s","Difference:  ");
-	printf("%" PRIx64 "\n",diffConverted);
-	bitDiff = areBuddies(diffConverted);
-	printf("%s","bitDiff:  ");
-	printf("%i\n",bitDiff);*/
+
 
 	return diffConverted;
-	//return(((uint64_t*)b)^((uint64_t*)a));
 }
 
 
