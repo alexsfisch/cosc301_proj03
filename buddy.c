@@ -35,7 +35,16 @@ const int MINIMUM_ALLOC = sizeof(int) * 2;
 void *heap_begin = NULL;
 void *free_list = NULL;
 
+/* works except for following issue:
+when you allocate a block inbetween two blocks in the free list
+it does not update the offset for the block to the left of allocated
+ex:
 
+|16|32|64|
+
+if you allocate block size 32, the offset for 16 should be adjustsed, 
+however it is not
+*/
 void *malloc(size_t request_size) {
 	int *temp = NULL;
 
@@ -53,16 +62,17 @@ void *malloc(size_t request_size) {
 		setHeader(heap_begin, HEAPSIZE, 0);
         atexit(dump_memory_map);
    }
-	printf("%s","request_size:    ");
-	printf("%i\n",request_size);
+
+	//printf("%s","free list location:    ");
+	//printf("%i\n",free_list);
+	
 		
 	amountToAllocate = closestPower2(request_size);
 	printf("%s", "ammount to allocate:   ");
 	printf("%i\n",amountToAllocate);
 
 	temp = firstFreeBlock(free_list, amountToAllocate);
-	printf("%s","memory location for block to allocate:   ");
-	printf("%i\n",temp);
+
 
 	printf("%s","first block of free list:    ");
 	printf("%i\n",free_list);
@@ -72,34 +82,50 @@ void *malloc(size_t request_size) {
 }
 
 void *splitBlock(int *free_list_temp, int amountToAllocate) {
-	//printf("%s\n","splitBlock:");
-	void* tempNext = (free_list_temp+(*(free_list_temp+1)/4));
-	void* free_list_temp2 = free_list_temp;
+		printf("%s\n","SPLIT BLOCK");
+	void* tempNext = free_list_temp;
+	void* free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
 	int difference = 0;
-	//int* free_list_temp = (int*)currentBlock;
-	//printf("%i\n",*(free_list_temp));
-	if (*(free_list_temp)>amountToAllocate) {
+
+	while (*(free_list_temp)>amountToAllocate) {
+
+		tempNext = free_list_temp;
+		free_list_temp2 = free_list_temp;
+
 		//update header of first
 		*(free_list_temp) = *(free_list_temp)/2;
-		//printf("%s", "new first header size:   ");
-		//printf("%i\n",*(free_list_temp));	
-		*(free_list_temp+1) = 0;
-		//printf("%s", "new first header next:   ");
-		//printf("%i\n",*(free_list_temp+1));
-		free_list = (free_list_temp + (*free_list_temp/4));
+		printf("%s", "new first header size:   ");
+		printf("%i\n",*(free_list_temp));	
+		*(free_list_temp+1) =  *(free_list_temp); //zero because you are allocating
+		printf("%s", "new first header next:   ");
+		printf("%i\n",*(free_list_temp+1));
+		//free_list = (free_list_temp + (*free_list_temp/4));
 
 
 		//update header of second
 		*(free_list_temp + (*free_list_temp/4)) = *(free_list_temp);
-		//printf("%s", "new second header size:   ");
-		//printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
+		printf("%s", "new second header size:   ");
+		printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
+		/*printf("%s", "*(free_list_temp + (*free_list_temp/4))");
+		printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
+		printf("%s", "*(free_list_temp + (*free_list_temp+1/4))");
+		printf("%i\n",*(free_list_temp + (*free_list_temp+1/4)));*/
 		free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
-		difference = diff( free_list_temp2,tempNext);
-		//*((free_list_temp + (*free_list_temp/4))+1) = 
-		*(free_list_temp + (*free_list_temp/4)+1) = difference;
-		//printf("%i\n",*(free_list_temp + (*free_list_temp/4)+1)); //need to fix this for last eleemtn. should be 0
 
+		//find difference for offset of second block
+		difference = diff(tempNext,free_list_temp2);
+		//printf("%s", "difference:   ");
+		//printf("%i\n",difference);
+		*(free_list_temp + (*free_list_temp/4)+1) = difference;
+		printf("%s", "new second header next:   ");
+		printf("%i\n",*(free_list_temp + (*free_list_temp/4)+1)); //need to fix this for last eleemtn. should be 0
+		printf("%s\n","-----next cut in half-------");
+
+		difference = 0;
 	}
+	setHeader(free_list_temp,*(free_list_temp),0);//set next to 0 to indicate allocated
+	free_list = free_list_temp2; //update free list to exclude recently allocated block
+	printf("%i\n",free_list);
 
 }
 
@@ -112,6 +138,7 @@ void *firstFreeBlock(void *free_list_local, int amountToAllocate) {
 		}
 		free_list_temp = free_list_temp + (*free_list_temp/4);
 	}
+
 	//for last element	
 	if (amountToAllocate<=*(free_list_temp)) {
 		return free_list_temp;
@@ -134,9 +161,11 @@ void dump_memory_map(void) {
 			printf("%s",",  offset:  ");
 			printf("%i",*(free_list_local+1));
 			printf("%s\n",",  free");
-			free_list_local = free_list_local + (*free_list_local/4);
-			printf("%i\n",free_list_local);
+			free_list_local = free_list_local + (*(free_list_local+1)/4);
+
 			//need to check current minus previous to see if there are allocated chunks inbetween.
+
+
 		}
 		printf("%s\n","-----------------------");
 }
