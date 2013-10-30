@@ -5,7 +5,7 @@ CFLAGS = -g -Wall
 # main executable file first
 TARGET = proj03
 # object files next
-OBJS = main.o buddy.o
+OBJS = main.o buddy.o -lm
 # header files next
 DEPS = 
 .PHONY : clean
