@@ -21,8 +21,12 @@ int closestPower2 (size_t requested);
 uint64_t diff (void *a, void *b);
 int areBuddies (uint64_t diff);
 void setHeader (void *v, int size, int next);
+int needCoalesce(int *free_temp);
 int getHeaderSize (void *v);
 int getHeaderNext (void *v);
+void printFreeBlock(int size,int next);
+void printAllocatedBlock(int size);
+void coal(int *free_temp);
 void *firstFreeBlock(void *free_list_local, int amountToAllocate);
 void *splitBlock(int *free_list_temp, int amountToAllocate);
 
@@ -94,43 +98,33 @@ void xfree(void *memory_block) {
 	int* memory_block_temp = (int*)(memory_block);
 	void* startOfMem = memory_block_temp-2;
 	int differ = memory_block-free_list;
-	void* first_buddy;
-	void* second_buddy;
 	int* free_list_temp = (int*) free_list;	
 
 	if (free_list>=memory_block) //Memory block is before head of free list
 	{	
 		differ=differ*(-1);		
 		differ+=8;				//Because memory_block starts at user bytes
-		*(memory_block_temp-1) = (differ);  //Next of memory block first element of old free list
-		free_list = startOfMem;
+		*(memory_block_temp-1) = differ;  //Next of memory block first element of old free list
+		free_list = startOfMem;  //Set newly freed block to front of free list
 	}
-
 	else{	//Memory block is after first element of free list
 		differ-=8;
-		int* free_list_temp2 = free_list_temp+(*(free_list_temp+1)/4); //used for iteration later
 		while (differ-*(free_list_temp+1)>0){	//while loop to find the closest free block
-			free_list_temp= free_list_temp2;
+			differ -= *(free_list_temp+1);
+			free_list_temp= free_list_temp+(*(free_list_temp+1)/4); //iterate to next free block
 		}	
 		*(memory_block_temp-1) = *(free_list_temp+1)-differ;	//Change info of free block
-		printf("%i\n",*(memory_block_temp-1));
-		*(free_list_temp+1)=differ;
+		*(free_list_temp+1)=differ;		//Set last free block's next to current freed block
 	}
 
-	free_list_temp = (int*) free_list;
-	while(*(free_list_temp+1)!=0){	//loop for right buds
-		printf("%s","SIZE OF FIRST BLOCK:  ");
-		printf("%i\n",*(free_list_temp));
-		printf("%i\n",*(free_list_temp+1));
-		while(*(free_list_temp)==*(free_list_temp+1)){
-			first_buddy = free_list_temp+2;
-			second_buddy = free_list_temp+((*(free_list_temp)/4)+2);
-			if(areBuddies(diff(first_buddy,second_buddy))){
-				mergeBlocks(free_list_temp+2);
-			}
-		}
-		free_list_temp = free_list_temp+(*(free_list_temp+1)/4);
-	}
+	free_list_temp = free_list;
+	coalesce(free_list_temp);
+	coalesce(free_list_temp);
+	//while(needCoalesce(free_list_temp)){
+		//coalesce(free_list_temp);
+		//free_list_temp = free_list;
+	//
+	//}
 }
 
 
@@ -194,7 +188,6 @@ void *firstFreeBlock(void *free_list_local, int amountToAllocate) {
 	int* free_list_temp = (int*)free_list_local;
 	sizeOfLastFreeBlock = 0;
 	while (*(free_list_temp+1)!=0) {
-
 		if (amountToAllocate<=*(free_list_temp)) {
 			printf("%s","Size of last free block:  ");
 			printf("%i\n",sizeOfLastFreeBlock);
@@ -214,35 +207,30 @@ void *firstFreeBlock(void *free_list_local, int amountToAllocate) {
 }
 
 
-
-/*
-
-NEED TO ADD PRINTING OF ALLOCATED BLOCKS
-JUST NEED TO SUBTRACT BETWEEN FREE BLOCKS
-*/
-
 void dump_memory_map(void) {
 		printf("%s\n","-----------------------");
 		int* free_list_local = (int*)(free_list);
-		while (*(free_list_local+1)!=0) {
-			printf("%s","Block Size:  ");
-			printf("%i",*(free_list_local));
-			printf("%s",",  offset:  ");
-			printf("%i",*(free_list_local+1));
-			printf("%s\n",",  free");
-			free_list_local = free_list_local + (*(free_list_local+1)/4);
-
-			//need to check current minus previous to see if there are allocated chunks inbetween.
-
-
+		void* end_of_free_list;
+		int last = 0;
+		if(free_list>heap_begin){ //If first block is allocated, calculates how much of first chunk
+			printAllocatedBlock(free_list-heap_begin);
 		}
+		while (*(free_list_local+1)!=0) {
+			printFreeBlock(*(free_list_local),*(free_list_local+1));
+			last = *(free_list_local+1)-*(free_list_local);
+			if (last!=0){ //In case you have two free blocks next to each who aren't buddies
+				printAllocatedBlock(last);
+			}
+			free_list_local = free_list_local + (*(free_list_local+1)/4);
+		}
+	
 		//print last free block
-		printf("%s","Block Size:  ");
-		printf("%i",*(free_list_local));
-		printf("%s",",  offset:  ");
-		printf("%i",*(free_list_local+1));
-		printf("%s\n",",  free");
+		printFreeBlock(*(free_list_local),*(free_list_local+1));
+		end_of_free_list = free_list_local+(*(free_list_local)/4);
+		if(heap_begin+HEAPSIZE>end_of_free_list)
+			printAllocatedBlock((heap_begin+HEAPSIZE)-end_of_free_list);
 		printf("%s\n","-----------------------");
+
 }
 
 
@@ -251,15 +239,8 @@ uint64_t diff (void *a, void *b) {
 	//b-a
 	int bitDiff = 0;
 	uint64_t aConverted = (uint64_t*)a; //typecast
-
-
 	uint64_t bConverted = (uint64_t*)b; //typecast
-
-
 	uint64_t diffConverted = bConverted^aConverted; //calc. diff
-
-
-
 	return diffConverted;
 }
 
@@ -278,7 +259,7 @@ int areBuddies (uint64_t diff){
 
 }
 
-//Given Left Block of two blocks, merges the two
+//Given Left Block of two buddies, merges the two
 void mergeBlocks(int *x){
 	int oldNext = *(x-1+(*(x-2)/4));
 	if (oldNext==0)
@@ -304,6 +285,52 @@ int getHeaderSize (void *v) {
 	return size;
 }
 
+void printFreeBlock(int size,int next){
+	printf("%s","Block Size:  ");
+	printf("%i",size);
+	printf("%s",",  offset:  ");
+	printf("%i",next);
+	printf("%s\n",",  free");
+}
+
+void printAllocatedBlock(int size){
+	printf("%s","Block Size:  ");
+	printf("%i",size);
+	printf("%s",",  offset:  0");
+	printf("%s\n",",  allocated");
+}
+
+/*
+int needCoalesce(int *free_temp){
+	void* first_buddy;
+	void* second_buddy;
+	while(*(free_temp+1)!=0){
+		printf("
+		if(*(free_temp)==*(free_temp+1)){
+			first_buddy = free_temp+2;
+			second_buddy = free_temp+(*(free_temp)/4)+2;
+			if(areBuddies(diff(first_buddy,second_buddy)))
+				return 1;
+		}
+		free_temp = free_temp+(*(free_temp+1)/4);
+	}
+	return 0;	
+}
+*/
+void coalesce(int *free_temp){
+	void* first_buddy;			//used for diff function later
+	void* second_buddy;
+	while(*(free_temp+1)!=0){	//loop to coalesce any bud to right
+		while(*(free_temp)==*(free_temp+1) && *(free_temp)==*(free_temp+*(free_temp)/4)){
+			first_buddy = free_temp+2;	//conditions in place in case areBuddies doesn't work
+			second_buddy = free_temp+((*(free_temp)/4)+2);
+			if(areBuddies(diff(first_buddy,second_buddy))){
+				mergeBlocks(free_temp+2);
+			}
+		}
+		free_temp = free_temp+(*(free_temp+1)/4);
+	}
+}
 
 int getHeaderNext (void *v) {
 	int next = 0;
