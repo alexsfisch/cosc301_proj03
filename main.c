@@ -10,16 +10,18 @@
 void dump_memory_map(void);
 
 int main(int argc, char **argv) {
-	printf("%s\n","main allocating 8");
-    void *m1 = malloc(8);  // should allocate 64 bytes
-    dump_memory_map();
-
+	printf("%s\n","main allocating 32");
+    void *m1 = malloc(0);  // should allocate 64 bytes
 	//printf("%s\n","main allocating 8");		
-    //void *m2 = malloc(8); // should allocate 128 bytes
+    //void *m2 = malloc(24); // should allocate 128 bytes
 	//diff(m1, m2);
-  xfree(m1);
-    dump_memory_map();
-   // void *m3 = malloc(21);  // should allocate 64 bytes
+	dump_memory_map();
+	xfree(m1);
+	dump_memory_map();
+	//xfree(m2);
+	//dump_memory_map();
+	//dump_memory_map();
+    //void *m3 = malloc(21);  // should allocate 64 bytes
     /*void *m4 = malloc(11);  // should allocate 32 bytes
 	diff(m3, m4);
     free(m3);

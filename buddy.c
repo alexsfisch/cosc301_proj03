@@ -91,26 +91,52 @@ CURRENTLY ONLY UPDATING THE HEADER
 NEED TO ADD COALESCING
 */
 void xfree(void *memory_block) {
-
-	//update current block header
 	int* memory_block_temp = (int*)(memory_block);
-	memory_block_temp = memory_block_temp-2;	
-	*(memory_block_temp+1) =  *(memory_block_temp); //zero because you are allocating
-	printf("%s", "header next:   ");
-	printf("%i\n",*(memory_block_temp+1));
-
-	printf("%s\n","----------------UPDATED ON FREE:    -------------");
-	printf("%s", "header size:   ");
-	printf("%i\n",*(memory_block_temp));	
-	*(memory_block_temp+1) =  *(memory_block_temp); //zero because you are allocating
-	printf("%s", "header next:   ");
-	printf("%i\n",*(memory_block_temp+1));
-	*(memory_block_temp+1)=*(memory_block_temp);
-	printf("%s\n","WTF");
-
-
-	
-
+	void* startOfMem = memory_block_temp-2;
+	int differ = memory_block-free_list;
+	void* buddytester;	
+	printf("%s","DIFFER:  ");	//Differ is distance in memory to a specific free block
+	printf("%i\n",differ);
+	if (free_list>=memory_block) //Memory block is before head of free list
+	{	
+		differ=differ*(-1);		
+		differ+=8;				//Because memory_block starts at user bytes
+		*(memory_block_temp-1) = (differ);  //Next of memory block first element of old free list
+		free_list = startOfMem;
+		while(*(memory_block_temp-2)==*(memory_block_temp-1)){ //checks to see if right block is bud
+			buddytester = memory_block_temp+(*(memory_block_temp-1)/4);
+			if(areBuddies(diff(memory_block,buddytester))){
+				mergeBlocks(memory_block_temp);		//Given the left block, merges them
+			}
+		}
+	}
+	else{	//Memory block is after first element of free list
+		differ-=8;
+		int* free_list_temp = (int*) free_list;
+		int* free_list_temp2 = free_list_temp+(*(free_list_temp+1)/4); //used for iteration later
+		while (differ-*(free_list_temp+1)>0){	//while loop to find the closest free block
+			free_list_temp= free_list_temp2;
+		}	
+		printf("%i\n",*(memory_block_temp-1));
+		printf("%i\n",differ);
+		printf("%s\n","LAST FREE BLOCK");
+		printf("%i\n",*(free_list_temp));
+		printf("%i\n",*(free_list_temp+1));
+		*(memory_block_temp-1) = *(free_list_temp+1)-differ;	//Change info of free block
+		printf("%i\n",*(memory_block_temp-1));
+		*(free_list_temp+1)=differ;
+		buddytester = free_list_temp;
+		if (areBuddies(diff(memory_block,buddytester))){	//Check whether left block is buddy
+			printf("%s\n","HELLO!!!!!!!");
+			mergeBlocks(free_list_temp+2);
+		}
+		while(*(memory_block_temp-2)==*(memory_block_temp-1)){	//loop for right buds
+			buddytester = memory_block_temp+(*(memory_block_temp-1)/4);
+			if(areBuddies(diff(memory_block,buddytester))){
+				mergeBlocks(memory_block_temp);
+			}
+		}
+	}
 }
 
 
@@ -119,6 +145,8 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 	int flag = 0;
 	void* tempNext = free_list_temp;
 	void* free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
+	void* free_list_temp3 = (free_list_temp-(sizeOfLastFreeBlock/4)+2);
+	void* free_list_temp4 = (free_list_temp-(sizeOfLastFreeBlock/4));
 	int difference = 0;
 
 	while (*(free_list_temp)>amountToAllocate) {
@@ -130,17 +158,17 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 		}
 		//update header of first
 		*(free_list_temp) = *(free_list_temp)/2;
-		//printf("%s", "new first header size:   ");
-		//printf("%i\n",*(free_list_temp));	
+		printf("%s", "new first header size:   ");
+		printf("%i\n",*(free_list_temp));	
 		*(free_list_temp+1) =  *(free_list_temp); //zero because you are allocating
-		//printf("%s", "new first header next:   ");
-		//printf("%i\n",*(free_list_temp+1));
+		printf("%s", "new first header next:   ");
+		printf("%i\n",*(free_list_temp+1));
 
 
 		//update header of second
 		*(free_list_temp + (*free_list_temp/4)) = *(free_list_temp);
-		//printf("%s", "new second header size:   ");
-		//printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
+		printf("%s", "new second header size:   ");
+		printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
 
 		free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
 		if (flag) {
@@ -152,36 +180,41 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 		}
 
 		*(free_list_temp + (*free_list_temp/4)+1) = difference;
-		//printf("%s", "new second header next:   ");
-		//printf("%i\n",*(free_list_temp + (*free_list_temp/4)+1)); //need to fix this for last eleemtn. should be 0
-		//printf("%s\n","-----next cut in half-------");
+		printf("%s", "new second header next:   ");
+		printf("%i\n",*(free_list_temp + (*free_list_temp/4)+1));
+		printf("%s\n","-----next cut in half-------");
 
 		difference = 0;
 		flag = 0;
 	}
+	setHeader(free_list_temp4,getHeaderSize(free_list_temp3),getHeaderNext(free_list_temp3)+*(free_list_temp+1));//Go back to last free block and update its next to account for the newly allocated block
 	setHeader(free_list_temp,*(free_list_temp),0);//set next to 0 to indicate allocated
-	free_list = free_list_temp2; //update free list to exclude recently allocated block
-	printf("%i\n",free_list);
+	if (sizeOfLastFreeBlock==0){	
+		free_list = free_list_temp2; //update first block of free list if it was allocate, else, leave it
+	}
 	return free_list_temp+2;
-
 }
 
 
 void *firstFreeBlock(void *free_list_local, int amountToAllocate) {
 	int* free_list_temp = (int*)free_list_local;
+	sizeOfLastFreeBlock = 0;
 	while (*(free_list_temp+1)!=0) {
 
 		if (amountToAllocate<=*(free_list_temp)) {
+			printf("%s","Size of last free block:  ");
+			printf("%i\n",sizeOfLastFreeBlock);
 			return free_list_temp;
 		}
-		sizeOfLastFreeBlock += (*free_list_temp/4);
-		free_list_temp = free_list_temp + (*free_list_temp/4);
+		sizeOfLastFreeBlock = *(free_list_temp+1);	//Takes the size of the LAST FREE BLOCK'S NEXT to know how far to go back when updating
+		free_list_temp = free_list_temp + (*(free_list_temp+1)/4);
 	}
 
 	//for last element	
 	if (amountToAllocate<=*(free_list_temp)) {
+		printf("%s","Size of last free block:  ");
+		printf("%i\n",sizeOfLastFreeBlock);
 		return free_list_temp;
-
 	}
 	return NULL;
 }
@@ -251,6 +284,16 @@ int areBuddies (uint64_t diff){
 
 }
 
+//Given Left Block of two blocks, merges the two
+void mergeBlocks(int *x){
+	int oldNext = *(x-1+(*(x-2)/4));
+	if (oldNext==0)
+		*(x-1) = 0;
+	else
+		*(x-1)+= oldNext;
+	*(x-2) = *(x-2)*2;
+}
+
 void setHeader (void *v, int size, int next) {
 	int* block = (int*)v;
 	*block = size;
@@ -263,7 +306,7 @@ int getHeaderSize (void *v) {
 	int* header = (int*)v;// typecast
 	header = header - 2;
 	size = *(header);
-	printf("%i\n",size);
+	//printf("%i\n",size);
 	return size;
 }
 
@@ -273,7 +316,7 @@ int getHeaderNext (void *v) {
 	int* header = (int*)v;// typecast
 	header = header - 2;
 	next = *(header+1);
-	printf("%i\n",next);
+	//printf("%i\n",next);
 	return next;
 }
 
