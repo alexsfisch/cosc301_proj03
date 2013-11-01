@@ -94,48 +94,42 @@ void xfree(void *memory_block) {
 	int* memory_block_temp = (int*)(memory_block);
 	void* startOfMem = memory_block_temp-2;
 	int differ = memory_block-free_list;
-	void* buddytester;	
-	printf("%s","DIFFER:  ");	//Differ is distance in memory to a specific free block
-	printf("%i\n",differ);
+	void* first_buddy;
+	void* second_buddy;
+	int* free_list_temp = (int*) free_list;	
+
 	if (free_list>=memory_block) //Memory block is before head of free list
 	{	
 		differ=differ*(-1);		
 		differ+=8;				//Because memory_block starts at user bytes
 		*(memory_block_temp-1) = (differ);  //Next of memory block first element of old free list
 		free_list = startOfMem;
-		while(*(memory_block_temp-2)==*(memory_block_temp-1)){ //checks to see if right block is bud
-			buddytester = memory_block_temp+(*(memory_block_temp-1)/4);
-			if(areBuddies(diff(memory_block,buddytester))){
-				mergeBlocks(memory_block_temp);		//Given the left block, merges them
-			}
-		}
 	}
+
 	else{	//Memory block is after first element of free list
 		differ-=8;
-		int* free_list_temp = (int*) free_list;
 		int* free_list_temp2 = free_list_temp+(*(free_list_temp+1)/4); //used for iteration later
 		while (differ-*(free_list_temp+1)>0){	//while loop to find the closest free block
 			free_list_temp= free_list_temp2;
 		}	
-		printf("%i\n",*(memory_block_temp-1));
-		printf("%i\n",differ);
-		printf("%s\n","LAST FREE BLOCK");
-		printf("%i\n",*(free_list_temp));
-		printf("%i\n",*(free_list_temp+1));
 		*(memory_block_temp-1) = *(free_list_temp+1)-differ;	//Change info of free block
 		printf("%i\n",*(memory_block_temp-1));
 		*(free_list_temp+1)=differ;
-		buddytester = free_list_temp;
-		if (areBuddies(diff(memory_block,buddytester))){	//Check whether left block is buddy
-			printf("%s\n","HELLO!!!!!!!");
-			mergeBlocks(free_list_temp+2);
-		}
-		while(*(memory_block_temp-2)==*(memory_block_temp-1)){	//loop for right buds
-			buddytester = memory_block_temp+(*(memory_block_temp-1)/4);
-			if(areBuddies(diff(memory_block,buddytester))){
-				mergeBlocks(memory_block_temp);
+	}
+
+	free_list_temp = (int*) free_list;
+	while(*(free_list_temp+1)!=0){	//loop for right buds
+		printf("%s","SIZE OF FIRST BLOCK:  ");
+		printf("%i\n",*(free_list_temp));
+		printf("%i\n",*(free_list_temp+1));
+		while(*(free_list_temp)==*(free_list_temp+1)){
+			first_buddy = free_list_temp+2;
+			second_buddy = free_list_temp+((*(free_list_temp)/4)+2);
+			if(areBuddies(diff(first_buddy,second_buddy))){
+				mergeBlocks(free_list_temp+2);
 			}
 		}
+		free_list_temp = free_list_temp+(*(free_list_temp+1)/4);
 	}
 }
 
