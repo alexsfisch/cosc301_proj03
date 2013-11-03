@@ -107,13 +107,22 @@ void xfree(void *memory_block) {
 		*(memory_block_temp-1) = differ;  //Next of memory block first element of old free list
 		free_list = startOfMem;  //Set newly freed block to front of free list
 	}
+
 	else{	//Memory block is after first element of free list
 		differ-=8;
-		while (differ-*(free_list_temp+1)>0){	//while loop to find the closest free block
+
+		while (*(free_list_temp+1)!=0){	//while loop to find the closest free block
+			if(differ-*(free_list_temp+1)<0)
+				break;
 			differ -= *(free_list_temp+1);
 			free_list_temp= free_list_temp+(*(free_list_temp+1)/4); //iterate to next free block
 		}	
-		*(memory_block_temp-1) = *(free_list_temp+1)-differ;	//Change info of free block
+
+		if (differ-*(free_list_temp+1)>0)	//in case the you are free the last allocated block
+			*(memory_block_temp-1) = 0;
+		else
+			*(memory_block_temp-1) = *(free_list_temp+1)-differ;	//Change info of free block
+
 		*(free_list_temp+1)=differ;		//Set last free block's next to current freed block
 	}
 
@@ -138,7 +147,6 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 	int difference = 0;
 
 	while (*(free_list_temp)>amountToAllocate) {
-
 		tempNext = free_list_temp;
 		free_list_temp2 = free_list_temp;
 		if (*(free_list_temp+1) == 0) { //if at end of list
@@ -175,7 +183,12 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 		difference = 0;
 		flag = 0;
 	}
+	if(*(free_list_temp+1)==0){	//if allocate last free block
+		setHeader(free_list_temp4,getHeaderSize(free_list_temp3),0);
+	}
+	else{
 	setHeader(free_list_temp4,getHeaderSize(free_list_temp3),getHeaderNext(free_list_temp3)+*(free_list_temp+1));//Go back to last free block and update its next to account for the newly allocated block
+	}
 	setHeader(free_list_temp,*(free_list_temp),0);//set next to 0 to indicate allocated
 	if (sizeOfLastFreeBlock==0){	
 		free_list = free_list_temp2; //update first block of free list if it was allocate, else, leave it
