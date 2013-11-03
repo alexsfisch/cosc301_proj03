@@ -62,38 +62,21 @@ void *malloc(size_t request_size) {
     if (!heap_begin) {
         heap_begin = mmap(NULL, HEAPSIZE, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
 		free_list=heap_begin;
-		printf("%s", "start of heap:   ");
-		printf("%i\n",heap_begin);
 		//set header
 		setHeader(heap_begin, HEAPSIZE, 0);
         atexit(dump_memory_map);
    }
 
-
-	
-		
 	amountToAllocate = closestPower2(request_size);
-	printf("%s", "ammount to allocate:   ");
-	printf("%i\n",amountToAllocate);
 
 	temp = firstFreeBlock(free_list, amountToAllocate);
 
-
-	printf("%s","first block of free list:    ");
-	printf("%i\n",free_list);
-
 	returnPointer = splitBlock(temp, amountToAllocate);
 	return returnPointer;
-
 }
 
-/*
-NEED TO UPDATE THE FREE LIST.
-CURRENTLY ONLY UPDATING THE HEADER
 
 
-NEED TO ADD COALESCING
-*/
 void xfree(void *memory_block) {
 	int* memory_block_temp = (int*)(memory_block);
 	void* startOfMem = memory_block_temp-2;
@@ -138,12 +121,11 @@ void xfree(void *memory_block) {
 
 
 void *splitBlock(int *free_list_temp, int amountToAllocate) {
-	printf("%s\n","SPLIT BLOCK");
 	int flag = 0;
 	void* tempNext = free_list_temp;
 	void* free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
-	void* free_list_temp3 = (free_list_temp-(sizeOfLastFreeBlock/4)+2);
-	void* free_list_temp4 = (free_list_temp-(sizeOfLastFreeBlock/4));
+	void* last_free_block = (free_list_temp-(sizeOfLastFreeBlock/4)+2);
+	void* front_of_last_free_block = (free_list_temp-(sizeOfLastFreeBlock/4));
 	int difference = 0;
 
 	while (*(free_list_temp)>amountToAllocate) {
@@ -154,17 +136,10 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 		}
 		//update header of first
 		*(free_list_temp) = *(free_list_temp)/2;
-		printf("%s", "new first header size:   ");
-		printf("%i\n",*(free_list_temp));	
 		*(free_list_temp+1) =  *(free_list_temp); //zero because you are allocating
-		printf("%s", "new first header next:   ");
-		printf("%i\n",*(free_list_temp+1));
-
 
 		//update header of second
 		*(free_list_temp + (*free_list_temp/4)) = *(free_list_temp);
-		printf("%s", "new second header size:   ");
-		printf("%i\n",*(free_list_temp + (*free_list_temp/4)));
 
 		free_list_temp2 = (free_list_temp+(*(free_list_temp+1)/4));
 		if (flag) {
@@ -176,19 +151,19 @@ void *splitBlock(int *free_list_temp, int amountToAllocate) {
 		}
 
 		*(free_list_temp + (*free_list_temp/4)+1) = difference;
-		printf("%s", "new second header next:   ");
-		printf("%i\n",*(free_list_temp + (*free_list_temp/4)+1));
-		printf("%s\n","-----next cut in half-------");
 
 		difference = 0;
 		flag = 0;
 	}
-	if(*(free_list_temp+1)==0){	//if allocate last free block
-		setHeader(free_list_temp4,getHeaderSize(free_list_temp3),0);
+	//Go back to last free block and update its next to account for the newly allocated block
+	if(*(free_list_temp+1)==0){	//if last free block is allocated, set next to zero
+		setHeader(front_of_last_free_block,getHeaderSize(last_free_block),0);
 	}
+
 	else{
-	setHeader(free_list_temp4,getHeaderSize(free_list_temp3),getHeaderNext(free_list_temp3)+*(free_list_temp+1));//Go back to last free block and update its next to account for the newly allocated block
+	setHeader(front_of_last_free_block,getHeaderSize(last_free_block),getHeaderNext(last_free_block)+*(free_list_temp+1));
 	}
+
 	setHeader(free_list_temp,*(free_list_temp),0);//set next to 0 to indicate allocated
 	if (sizeOfLastFreeBlock==0){	
 		free_list = free_list_temp2; //update first block of free list if it was allocate, else, leave it
@@ -202,8 +177,6 @@ void *firstFreeBlock(void *free_list_local, int amountToAllocate) {
 	sizeOfLastFreeBlock = 0;
 	while (*(free_list_temp+1)!=0) {
 		if (amountToAllocate<=*(free_list_temp)) {
-			printf("%s","Size of last free block:  ");
-			printf("%i\n",sizeOfLastFreeBlock);
 			return free_list_temp;
 		}
 		sizeOfLastFreeBlock = *(free_list_temp+1);	//Takes the size of the LAST FREE BLOCK'S NEXT to know how far to go back when updating
@@ -212,8 +185,6 @@ void *firstFreeBlock(void *free_list_local, int amountToAllocate) {
 
 	//for last element	
 	if (amountToAllocate<=*(free_list_temp)) {
-		printf("%s","Size of last free block:  ");
-		printf("%i\n",sizeOfLastFreeBlock);
 		return free_list_temp;
 	}
 	return NULL;
@@ -294,7 +265,6 @@ int getHeaderSize (void *v) {
 	int* header = (int*)v;// typecast
 	header = header - 2;
 	size = *(header);
-	//printf("%i\n",size);
 	return size;
 }
 
@@ -350,7 +320,6 @@ int getHeaderNext (void *v) {
 	int* header = (int*)v;// typecast
 	header = header - 2;
 	next = *(header+1);
-	//printf("%i\n",next);
 	return next;
 }
 
