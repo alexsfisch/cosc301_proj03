@@ -21,7 +21,8 @@ int closestPower2 (size_t requested);
 uint64_t diff (void *a, void *b);
 int areBuddies (uint64_t diff);
 void setHeader (void *v, int size, int next);
-int needCoalesce(int *free_temp);
+//int needCoalesce(int *free_temp);
+void coalesce(int *free_temp);
 int getHeaderSize (void *v);
 int getHeaderNext (void *v);
 void printFreeBlock(int size,int next);
@@ -31,7 +32,7 @@ void *firstFreeBlock(void *free_list_local, int amountToAllocate);
 void *splitBlock(int *free_list_temp, int amountToAllocate);
 
 
-const int HEAPSIZE = (1*128); // 1 MB
+const int HEAPSIZE = (1*256); // 1 MB
 const int MINIMUM_ALLOC = sizeof(int) * 2;
 int sizeOfLastFreeBlock = 0;
 
@@ -40,16 +41,7 @@ int sizeOfLastFreeBlock = 0;
 void *heap_begin = NULL;
 void *free_list = NULL;
 
-/* works except for following issue:
-when you allocate a block inbetween two blocks in the free list
-it does not update the offset for the block to the left of allocated
-ex:
 
-|16|32|64|
-
-if you allocate block size 32, the offset for 16 should be adjustsed, 
-however it is not
-*/
 void *malloc(size_t request_size) {
 	void *returnPointer = NULL;
 	int *temp = NULL;
@@ -221,7 +213,7 @@ void dump_memory_map(void) {
 //check the difference between two header locations
 uint64_t diff (void *a, void *b) {
 	//b-a
-	int bitDiff = 0;
+	//int bitDiff = 0;
 	uint64_t aConverted = (uint64_t*)a; //typecast
 	uint64_t bConverted = (uint64_t*)b; //typecast
 	uint64_t diffConverted = bConverted^aConverted; //calc. diff
