@@ -21,8 +21,7 @@ int closestPower2 (size_t requested);
 uint64_t diff (void *a, void *b);
 int areBuddies (uint64_t diff);
 void setHeader (void *v, int size, int next);
-//int needCoalesce(int *free_temp);
-void coalesce(int *free_temp);
+int coalesce(int *free_temp);
 int getHeaderSize (void *v);
 int getHeaderNext (void *v);
 void printFreeBlock(int size,int next);
@@ -32,7 +31,7 @@ void *firstFreeBlock(void *free_list_local, int amountToAllocate);
 void *splitBlock(int *free_list_temp, int amountToAllocate);
 
 
-const int HEAPSIZE = (1*256); // 1 MB
+const int HEAPSIZE = (1*64); // 1 MB
 const int MINIMUM_ALLOC = sizeof(int) * 2;
 int sizeOfLastFreeBlock = 0;
 
@@ -101,14 +100,9 @@ void xfree(void *memory_block) {
 		*(free_list_temp+1)=differ;		//Set last free block's next to current freed block
 	}
 
-	free_list_temp = free_list;
-	coalesce(free_list_temp);
-	coalesce(free_list_temp);
-	//while(needCoalesce(free_list_temp)){
-		//coalesce(free_list_temp);
-		//free_list_temp = free_list;
-	//
-	//}
+	while(coalesce(free_list_temp=free_list)){ //coalesce until not needed
+	}
+	
 }
 
 
@@ -275,24 +269,8 @@ void printAllocatedBlock(int size){
 	printf("%s\n",",  allocated");
 }
 
-/*
-int needCoalesce(int *free_temp){
-	void* first_buddy;
-	void* second_buddy;
-	while(*(free_temp+1)!=0){
-		printf("
-		if(*(free_temp)==*(free_temp+1)){
-			first_buddy = free_temp+2;
-			second_buddy = free_temp+(*(free_temp)/4)+2;
-			if(areBuddies(diff(first_buddy,second_buddy)))
-				return 1;
-		}
-		free_temp = free_temp+(*(free_temp+1)/4);
-	}
-	return 0;	
-}
-*/
-void coalesce(int *free_temp){
+int coalesce(int *free_temp){
+	int blocksMerged = 0;
 	void* first_buddy;			//used for diff function later
 	void* second_buddy;
 	while(*(free_temp+1)!=0){	//loop to coalesce any bud to right
@@ -301,10 +279,12 @@ void coalesce(int *free_temp){
 			second_buddy = free_temp+((*(free_temp)/4)+2);
 			if(areBuddies(diff(first_buddy,second_buddy))){
 				mergeBlocks(free_temp+2);
+				blocksMerged = 1;
 			}
 		}
 		free_temp = free_temp+(*(free_temp+1)/4);
 	}
+	return blocksMerged;
 }
 
 int getHeaderNext (void *v) {
