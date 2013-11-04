@@ -8,6 +8,7 @@
 
 
 void dump_memory_map(void);
+void xfree(void *memory_block);
 
 int main(int argc, char **argv) {
     void *m1 = malloc(0); 
@@ -17,9 +18,11 @@ int main(int argc, char **argv) {
 	void *m5 = malloc(0);
 	void *m6 = malloc(0);
 	void *m7 = malloc(0); 
+	dump_memory_map();
 	void *m8 = malloc(0);
 	dump_memory_map();
 	xfree(m1);
+	dump_memory_map();
 	xfree(m2);
 	xfree(m3);
 	xfree(m4);
