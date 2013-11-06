@@ -59,8 +59,12 @@ void *malloc(size_t request_size) {
 		setHeader(heap_begin, HEAPSIZE, 0);
         atexit(dump_memory_map);
    }
-
+	
 	amountToAllocate = closestPower2(request_size);
+
+	if(free_list==NULL || amountToAllocate>HEAPSIZE){
+		return NULL;
+	}
 
 	temp = firstFreeBlock(free_list, amountToAllocate);
 
