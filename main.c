@@ -11,7 +11,7 @@ void dump_memory_map(void);
 void xfree(void *memory_block);
 
 int main(int argc, char **argv) {
-    void *m1 = malloc(3000); 
+    void *m1 = malloc(30); 
 	//void *m2 = malloc(0);
 	//void *m3 = malloc(0);
 	//void *m4 = malloc(0); 
